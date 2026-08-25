@@ -47,7 +47,16 @@ export default async function LandingPage({
           </p>
         )}
 
-        <p className="mt-8 max-w-md text-sm text-ink-soft/80">
+        <p className="mt-6">
+          <a
+            href="/demo"
+            className="text-sm font-medium text-sea underline-offset-2 hover:underline"
+          >
+            Preview the app with demo data →
+          </a>
+        </p>
+
+        <p className="mt-6 max-w-md text-sm text-ink-soft/80">
           We request read-only access to your contacts and calendar. Notes stay
           in your Memory account.
         </p>

@@ -33,7 +33,8 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute =
     pathname === "/" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/cron");
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/demo");
   const isProtected =
     pathname.startsWith("/people") ||
     pathname.startsWith("/reminders") ||
