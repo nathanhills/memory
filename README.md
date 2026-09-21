@@ -1,97 +1,39 @@
 # Memory
 
-Remember what matters about the people in your life. Memory is a Next.js web app that connects to Google Contacts and Calendar, lets you take notes about friends, and reminds you via:
+Remember what matters about the people in your life. Memory is an **iPhone app** for notes about friends, birthdays, and what to recall before you meet.
 
-- **Note due dates** — optional remind-on date on any note
-- **Birthdays & anniversaries** — from synced contact fields
-- **Pre-event context** — before calendar events with a contact, surface their recent notes
+The current focus is the native iOS build. A Next.js/Supabase web MVP remains in this repo as earlier work, but iOS is the product to run and iterate on.
 
-iOS can reuse the same Supabase backend later; this MVP is web-first.
+## iOS (current)
 
-## Stack
+Open and run:
 
-- Next.js (App Router) + TypeScript + Tailwind
-- Supabase Auth (Google) + Postgres + RLS
-- Google People API + Calendar API (read-only)
-- Vercel Cron for reminder materialization + optional Resend email digests
-
-## Setup
-
-### 1. Google Cloud
-
-1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable **People API** and **Google Calendar API**.
-3. Configure OAuth consent screen (External or Internal).
-4. Create OAuth client ID type **Web application**.
-5. Add authorized redirect URIs for Supabase:
-   - `https://<project-ref>.supabase.co/auth/v1/callback`
-6. Copy the Client ID and Client Secret.
-
-### 2. Supabase
-
-1. Create a project at [supabase.com](https://supabase.com).
-2. **Authentication → Providers → Google**: enable and paste Client ID / Secret.
-3. Under Google provider **Additional Scopes**, add:
-   - `https://www.googleapis.com/auth/contacts.readonly`
-   - `https://www.googleapis.com/auth/calendar.readonly`
-4. **Authentication → URL Configuration**: set Site URL to `http://localhost:3000` (and production URL later). Add redirect `http://localhost:3000/auth/callback`.
-5. Run the SQL migration in the SQL editor:
-   - [`supabase/migrations/001_initial_schema.sql`](supabase/migrations/001_initial_schema.sql)
-
-### 3. App env
-
-```bash
-cp .env.example .env.local
+```text
+ios/Memory.xcodeproj
 ```
 
-Fill in:
+Full setup is in [`ios/README.md`](ios/README.md). In short:
 
-| Variable | Purpose |
+1. Open the project in Xcode 16+ on a Mac.
+2. Run on an iPhone simulator or device (iOS 17+).
+3. Allow Contacts and Calendar on first launch.
+
+People and events come from the iPhone address book and calendars. Notes and reminders stay on-device.
+
+| Tab | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role (cron only) |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Same as Supabase Google provider (token refresh) |
-| `CRON_SECRET` | Shared secret for `/api/cron/reminders` |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Optional email digests |
+| Today | Upcoming reminders / first sync |
+| People | Searchable contacts |
+| Person | Notes + upcoming shared events |
+| Reminders | Notes due, birthdays, pre-event context |
+| Settings | Sync, event lead time, notifications |
 
-### 4. Run locally
+## Web MVP (earlier)
+
+The Next.js app under the repo root used Google Contacts/Calendar and Supabase. It is not required to run the iPhone app.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000), sign in with Google (consent to Contacts + Calendar), then **Sync** from Home or Settings.
-
-## Product routes
-
-| Path | Purpose |
-| --- | --- |
-| `/` | Landing + Google sign-in |
-| `/home` | Today’s reminders / first sync |
-| `/people` | Searchable contacts |
-| `/people/[id]` | Notes + upcoming shared events |
-| `/reminders` | Unified reminder feed |
-| `/settings` | Sync, event lead time, email digest |
-
-## APIs
-
-- `POST /api/sync` — pull contacts + next 90 days of calendar; rebuild reminders
-- `POST|PATCH|DELETE /api/notes` — note CRUD
-- `PATCH /api/reminders` — dismiss / update status
-- `PATCH /api/settings` — profile preferences
-- `GET /api/cron/reminders` — authorized with `Authorization: Bearer $CRON_SECRET`; materializes reminders and sends digests
-
-`vercel.json` schedules that cron hourly.
-
-## Security notes
-
-- All tables use RLS scoped to `auth.uid()`.
-- Google scopes are **read-only**.
-- Provider tokens are stored on `profiles` for server-side sync; protect the service role key and never expose it to the client.
-
-## Deploy
-
-Deploy to Vercel, set the same env vars, update Supabase Site URL / redirect URLs and Google OAuth authorized origins/redirects for your production domain.
