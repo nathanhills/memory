@@ -14,105 +14,95 @@ struct TodayView: View {
             .sorted { $0.dueAt < $1.dueAt }
     }
 
-    private var todayItems: [ReminderRecord] {
+    private var dueToday: [ReminderRecord] {
         pending.filter { Calendar.current.isDateInToday($0.dueAt) || $0.dueAt < .now }
     }
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Memory")
-                        .font(.system(size: 44, weight: .regular, design: .serif))
-                        .foregroundStyle(MemoryTheme.seaDeep)
-                    Text("Who to remember today")
-                        .font(.system(.title2, design: .serif))
-                        .foregroundStyle(MemoryTheme.ink)
-                    Text("Birthdays, notes coming due, and friends you’ll see soon.")
-                        .foregroundStyle(MemoryTheme.inkSoft)
-                }
+    private var upcoming: [ReminderRecord] {
+        pending.filter { reminder in
+            !dueToday.contains(where: { $0.id == reminder.id })
+        }
+    }
 
-                if store.people.isEmpty {
-                    EmptyCard {
-                        Text("Connect your people")
-                            .font(.system(.title3, design: .serif))
-                        Text("Sync iPhone Contacts and the next 90 days of Calendar to get started.")
-                            .font(.subheadline)
-                            .foregroundStyle(MemoryTheme.inkSoft)
-                        Button {
-                            Task { await store.sync(context: modelContext) }
-                        } label: {
-                            Text(store.isSyncing ? "Syncing…" : "Sync contacts & calendar")
-                        }
-                        .buttonStyle(SeaButtonStyle(disabled: store.isSyncing))
-                        .disabled(store.isSyncing)
+    var body: some View {
+        Group {
+            if store.people.isEmpty {
+                ContentUnavailableView {
+                    Label("Connect Your People", systemImage: "person.2")
+                } description: {
+                    Text("Sync Contacts and the next 90 days of Calendar to see who to remember.")
+                } actions: {
+                    Button("Sync") {
+                        Task { await store.sync(context: modelContext) }
                     }
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Coming up")
-                                .font(.system(.title3, design: .serif))
-                            Spacer()
-                        }
-                        if pending.isEmpty {
-                            Text("No reminders in the next week. Add a note with a remind date, or wait for birthdays and meetings.")
-                                .foregroundStyle(MemoryTheme.inkSoft)
-                        } else {
-                            ForEach(pending.prefix(8), id: \.id) { reminder in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(todayItems.contains(where: { $0.id == reminder.id })
-                                         ? "\(reminder.kind.label.uppercased()) · today"
-                                         : reminder.kind.label.uppercased())
-                                        .font(.caption.weight(.medium))
-                                        .tracking(0.6)
-                                        .foregroundStyle(MemoryTheme.sea)
-                                    Text(reminder.title)
-                                        .font(.headline)
-                                        .foregroundStyle(MemoryTheme.ink)
-                                    Text(reminder.dueAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
-                                        .font(.subheadline)
-                                        .foregroundStyle(MemoryTheme.inkSoft)
-                                }
-                                .padding(.vertical, 10)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .overlay(alignment: .bottom) {
-                                    Rectangle()
-                                        .fill(MemoryTheme.ink.opacity(0.08))
-                                        .frame(height: 1)
-                                }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.isSyncing)
+                }
+            } else if pending.isEmpty {
+                ContentUnavailableView(
+                    "Nothing This Week",
+                    systemImage: "checkmark.circle",
+                    description: Text("Add a note with a remind date, or wait for birthdays and meetings.")
+                )
+            } else {
+                List {
+                    if !dueToday.isEmpty {
+                        Section("Today") {
+                            ForEach(dueToday, id: \.id) { reminder in
+                                reminderLink(reminder)
                             }
                         }
                     }
-
-                    Button {
-                        Task { await store.sync(context: modelContext) }
-                    } label: {
-                        Text(store.isSyncing ? "Syncing…" : "Re-sync")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(MemoryTheme.sea)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    if !upcoming.isEmpty {
+                        Section("Coming Up") {
+                            ForEach(upcoming.prefix(8), id: \.id) { reminder in
+                                reminderLink(reminder)
+                            }
+                        }
                     }
-                    .disabled(store.isSyncing)
-
                     if let synced = settingsRows.first?.lastContactsSync {
-                        Text("Last synced \(synced.formatted(.dateTime.month().day().hour().minute()))")
-                            .font(.caption)
-                            .foregroundStyle(MemoryTheme.inkSoft)
+                        Section {
+                            LabeledContent("Last Synced") {
+                                Text(synced, format: .dateTime.month().day().hour().minute())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
-
-                if let error = store.lastError {
-                    Text(error)
-                        .font(.subheadline)
-                        .foregroundStyle(MemoryTheme.coral)
-                }
+                .listStyle(.insetGrouped)
             }
-            .padding(24)
         }
-        .background { AtmosphereBackground() }
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Today")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(for: Person.self) { person in
+            PersonDetailView(person: person)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                SyncToolbarButton()
+            }
+        }
+        .refreshable {
+            await store.sync(context: modelContext)
+        }
+        .overlay(alignment: .bottom) {
+            if let error = store.lastError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .padding()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func reminderLink(_ reminder: ReminderRecord) -> some View {
+        if let person = store.person(for: reminder.contactIdentifier) {
+            NavigationLink(value: person) {
+                ReminderRow(reminder: reminder)
+            }
+        } else {
+            ReminderRow(reminder: reminder)
+        }
     }
 }

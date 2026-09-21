@@ -18,7 +18,7 @@ struct MemoryApp: App {
     WelcomeView(isRequesting: false, onContinue: {})
 }
 
-#Preview("Today empty") {
+#Preview("Today") {
     NavigationStack {
         TodayView()
     }

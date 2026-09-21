@@ -16,75 +16,47 @@ struct RemindersView: View {
     var body: some View {
         Group {
             if visible.isEmpty {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        header
-                        Text("Nothing queued right now. Sync contacts and add notes to grow this list.")
-                            .foregroundStyle(MemoryTheme.inkSoft)
-                    }
-                    .padding(24)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .background { AtmosphereBackground() }
+                ContentUnavailableView(
+                    "No Reminders",
+                    systemImage: "bell",
+                    description: Text("Sync contacts and add notes to grow this list.")
+                )
             } else {
                 List {
                     ForEach(visible, id: \.id) { reminder in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 8) {
-                                Text(reminder.kind.label.uppercased())
-                                    .font(.caption.weight(.medium))
-                                    .tracking(0.6)
-                                    .foregroundStyle(MemoryTheme.sea)
-                                Text(reminder.dueAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
-                                    .font(.caption)
-                                    .foregroundStyle(MemoryTheme.inkSoft)
+                        Group {
+                            if let person = store.person(for: reminder.contactIdentifier) {
+                                NavigationLink(value: person) {
+                                    ReminderRow(reminder: reminder)
+                                }
+                            } else {
+                                ReminderRow(reminder: reminder)
                             }
-                            Text(reminder.title)
-                                .font(.system(.title3, design: .serif))
-                                .foregroundStyle(MemoryTheme.ink)
-                            if let body = reminder.body, !body.isEmpty {
-                                Text(body)
-                                    .font(.subheadline)
-                                    .foregroundStyle(MemoryTheme.inkSoft)
-                            }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             if reminder.status == .pending {
                                 Button("Dismiss") {
                                     store.dismiss(reminder, context: modelContext)
                                 }
-                                .font(.subheadline)
-                                .foregroundStyle(MemoryTheme.inkSoft)
                             }
                         }
-                        .padding(.vertical, 8)
-                        .listRowBackground(Color.white.opacity(0.35))
                     }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background { AtmosphereBackground() }
+                .listStyle(.insetGrouped)
             }
         }
         .navigationTitle("Reminders")
         .navigationBarTitleDisplayMode(.large)
-        .safeAreaInset(edge: .top, alignment: .leading, spacing: 0) {
-            if !visible.isEmpty {
-                Text("Notes due, birthdays, anniversaries, and pre-event context.")
-                    .font(.subheadline)
-                    .foregroundStyle(MemoryTheme.inkSoft)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
-                    .background(Color.clear)
+        .navigationDestination(for: Person.self) { person in
+            PersonDetailView(person: person)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                SyncToolbarButton()
             }
         }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Reminders")
-                .font(.system(.largeTitle, design: .serif))
-            Text("Notes due, birthdays, anniversaries, and pre-event context.")
-                .foregroundStyle(MemoryTheme.inkSoft)
+        .refreshable {
+            await store.sync(context: modelContext)
         }
     }
 }

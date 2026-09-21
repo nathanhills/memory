@@ -21,7 +21,6 @@ struct RootView: View {
                 }
             }
         }
-        .tint(MemoryTheme.sea)
         .onAppear {
             _ = settings
             if settings.hasCompletedOnboarding {
@@ -49,30 +48,22 @@ struct MainTabView: View {
             NavigationStack {
                 TodayView()
             }
-            .tabItem {
-                Label("Today", systemImage: "sun.max")
-            }
+            .tabItem { Label("Today", systemImage: "sun.max") }
 
             NavigationStack {
                 PeopleView()
             }
-            .tabItem {
-                Label("People", systemImage: "person.2")
-            }
+            .tabItem { Label("People", systemImage: "person.2") }
 
             NavigationStack {
                 RemindersView()
             }
-            .tabItem {
-                Label("Reminders", systemImage: "bell")
-            }
+            .tabItem { Label("Reminders", systemImage: "bell") }
 
             NavigationStack {
                 SettingsView()
             }
-            .tabItem {
-                Label("Settings", systemImage: "gearshape")
-            }
+            .tabItem { Label("Settings", systemImage: "gearshape") }
         }
     }
 }

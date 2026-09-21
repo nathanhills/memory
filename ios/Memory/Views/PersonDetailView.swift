@@ -7,10 +7,7 @@ struct PersonDetailView: View {
     @Query(sort: \ContactNote.createdAt, order: .reverse) private var allNotes: [ContactNote]
 
     let person: Person
-
-    @State private var draft = ""
-    @State private var remindAt = Date()
-    @State private var includeReminder = false
+    @State private var showingComposer = false
 
     private var notes: [ContactNote] {
         allNotes.filter { $0.contactIdentifier == person.id }
@@ -21,135 +18,151 @@ struct PersonDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                header
-                notesSection
-                eventsSection
-            }
-            .padding(24)
-        }
-        .background { AtmosphereBackground() }
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
-            PersonAvatar(person: person, size: 64)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(person.displayName)
-                    .font(.system(.largeTitle, design: .serif))
-                    .foregroundStyle(MemoryTheme.ink)
-                if let email = person.emails.first {
-                    Text(email)
-                        .foregroundStyle(MemoryTheme.inkSoft)
-                }
-                if let birthday = person.birthdayLabel {
-                    Text(birthday)
-                        .font(.subheadline)
-                        .foregroundStyle(MemoryTheme.sea)
+        List {
+            Section {
+                HStack(spacing: 16) {
+                    PersonAvatar(person: person, size: 56)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let email = person.emails.first {
+                            Text(email)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let birthday = person.birthdayLabel {
+                            Text(birthday)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    private var notesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Notes")
-                .font(.system(.title2, design: .serif))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("New note")
-                    .font(.subheadline)
-                    .foregroundStyle(MemoryTheme.inkSoft)
-                TextField("Something you want to remember…", text: $draft, axis: .vertical)
-                    .lineLimit(3...6)
-                    .padding(12)
-                    .background(.white.opacity(0.7))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(MemoryTheme.ink.opacity(0.12), lineWidth: 1)
-                    )
-
-                Toggle("Remind me on a date", isOn: $includeReminder)
-                    .foregroundStyle(MemoryTheme.inkSoft)
-                if includeReminder {
-                    DatePicker("Remind me on", selection: $remindAt)
-                        .labelsHidden()
-                }
-
+            Section("Notes") {
                 Button {
-                    let body = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !body.isEmpty else { return }
-                    store.addNote(
-                        contactIdentifier: person.id,
-                        body: body,
-                        remindAt: includeReminder ? remindAt : nil,
-                        context: modelContext
-                    )
-                    draft = ""
-                    includeReminder = false
+                    showingComposer = true
                 } label: {
-                    Text("Save note")
+                    Label("Add Note", systemImage: "plus")
                 }
-                .buttonStyle(SeaButtonStyle(disabled: draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
 
-            if notes.isEmpty {
-                Text("No notes yet. Capture something worth remembering.")
-                    .font(.subheadline)
-                    .foregroundStyle(MemoryTheme.inkSoft)
-            } else {
-                ForEach(notes, id: \.id) { note in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(note.body)
-                            .foregroundStyle(MemoryTheme.ink)
-                        HStack(spacing: 12) {
-                            Text(note.createdAt.formatted(.dateTime.month().day().year()))
-                            if let remindAt = note.remindAt {
-                                Text("Remind \(remindAt.formatted(.dateTime.month().day().year().hour().minute()))")
-                                    .foregroundStyle(MemoryTheme.coral)
+                if notes.isEmpty {
+                    Text("No notes yet.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(notes, id: \.id) { note in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(note.body)
+                            HStack {
+                                Text(note.createdAt, format: .dateTime.month().day().year())
+                                if let remindAt = note.remindAt {
+                                    Text(remindAt, format: .dateTime.month().day().hour().minute())
+                                }
                             }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button("Delete", role: .destructive) {
                                 store.deleteNote(note, context: modelContext)
                             }
                         }
-                        .font(.caption)
-                        .foregroundStyle(MemoryTheme.inkSoft)
-                    }
-                    .padding(.bottom, 12)
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(MemoryTheme.ink.opacity(0.1))
-                            .frame(height: 1)
                     }
                 }
             }
+
+            Section("Upcoming Together") {
+                if sharedEvents.isEmpty {
+                    Text("No matching calendar events.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(sharedEvents) { event in
+                        LabeledContent(event.title) {
+                            Text(event.start, format: .dateTime.month().day().hour().minute())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(person.displayName)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingComposer = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                .accessibilityLabel("Add Note")
+            }
+        }
+        .sheet(isPresented: $showingComposer) {
+            NoteComposerView(person: person)
         }
     }
+}
 
-    private var eventsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Upcoming together")
-                .font(.system(.title2, design: .serif))
-            if sharedEvents.isEmpty {
-                Text("No upcoming calendar events with matching attendees.")
-                    .font(.subheadline)
-                    .foregroundStyle(MemoryTheme.inkSoft)
-            } else {
-                ForEach(sharedEvents) { event in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(event.title)
-                            .font(.headline)
-                        Text(event.start.formatted(.dateTime.month().day().hour().minute()))
-                            .font(.subheadline)
-                            .foregroundStyle(MemoryTheme.inkSoft)
+struct NoteComposerView: View {
+    @Environment(MemoryStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    let person: Person
+    @State private var draft = ""
+    @State private var includeReminder = false
+    @State private var remindAt = Date()
+
+    private var canSave: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Note") {
+                    TextField("Something you want to remember", text: $draft, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+                Section {
+                    Toggle("Remind Me", isOn: $includeReminder)
+                    if includeReminder {
+                        DatePicker("Date", selection: $remindAt)
                     }
-                    .padding(.vertical, 6)
+                }
+            }
+            .navigationTitle("New Note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Cancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        save()
+                    } label: {
+                        Image(systemName: "checkmark")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSave)
+                    .accessibilityLabel("Save")
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func save() {
+        let body = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { return }
+        store.addNote(
+            contactIdentifier: person.id,
+            body: body,
+            remindAt: includeReminder ? remindAt : nil,
+            context: modelContext
+        )
+        dismiss()
     }
 }

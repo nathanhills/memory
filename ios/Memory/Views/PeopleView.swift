@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PeopleView: View {
     @Environment(MemoryStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
     @State private var query = ""
 
     private var filtered: [Person] {
@@ -18,43 +19,39 @@ struct PeopleView: View {
     var body: some View {
         Group {
             if store.people.isEmpty {
-                ScrollView {
-                    EmptyCard {
-                        Text("No contacts yet. Sync from iPhone Contacts to populate this list.")
-                            .foregroundStyle(MemoryTheme.inkSoft)
+                ContentUnavailableView {
+                    Label("No People", systemImage: "person.2")
+                } description: {
+                    Text("Allow Contacts access, then pull to refresh.")
+                } actions: {
+                    Button("Sync") {
+                        Task { await store.sync(context: modelContext) }
                     }
-                    .padding(24)
                 }
-                .background { AtmosphereBackground() }
+            } else if filtered.isEmpty {
+                ContentUnavailableView.search(text: query)
             } else {
-                List {
-                    ForEach(filtered) { person in
-                        NavigationLink(value: person) {
-                            HStack(spacing: 12) {
-                                PersonAvatar(person: person)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(person.displayName)
-                                        .foregroundStyle(MemoryTheme.ink)
-                                    if let email = person.emails.first {
-                                        Text(email)
-                                            .font(.subheadline)
-                                            .foregroundStyle(MemoryTheme.inkSoft)
-                                    }
+                List(filtered) { person in
+                    NavigationLink(value: person) {
+                        HStack(spacing: 12) {
+                            PersonAvatar(person: person)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(person.displayName)
+                                if let email = person.emails.first {
+                                    Text(email)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
-                            .padding(.vertical, 4)
                         }
-                        .listRowBackground(Color.white.opacity(0.35))
                     }
                 }
                 .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background { AtmosphereBackground() }
-                .searchable(text: $query, prompt: "Search by name or email")
             }
         }
         .navigationTitle("People")
         .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $query, prompt: "Name or email")
         .navigationDestination(for: Person.self) { person in
             PersonDetailView(person: person)
         }
@@ -63,23 +60,8 @@ struct PeopleView: View {
                 SyncToolbarButton()
             }
         }
-    }
-}
-
-struct SyncToolbarButton: View {
-    @Environment(MemoryStore.self) private var store
-    @Environment(\.modelContext) private var modelContext
-
-    var body: some View {
-        Button {
-            Task { await store.sync(context: modelContext) }
-        } label: {
-            if store.isSyncing {
-                ProgressView()
-            } else {
-                Text("Sync")
-            }
+        .refreshable {
+            await store.sync(context: modelContext)
         }
-        .disabled(store.isSyncing)
     }
 }

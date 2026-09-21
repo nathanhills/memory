@@ -1,11 +1,12 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @Environment(MemoryStore.self) private var store
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     @Query private var settingsRows: [AppSettings]
-    @State private var savedMessage: String?
 
     private var settings: AppSettings {
         store.settings(in: modelContext)
@@ -13,51 +14,59 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("iPhone sync") {
+            Section {
                 Button {
                     Task { await store.sync(context: modelContext) }
                 } label: {
-                    Text(store.isSyncing ? "Syncing…" : "Sync contacts & calendar now")
+                    if store.isSyncing {
+                        Label("Syncing…", systemImage: "arrow.clockwise")
+                    } else {
+                        Label("Sync Now", systemImage: "arrow.clockwise")
+                    }
                 }
                 .disabled(store.isSyncing)
 
                 if let contacts = settingsRows.first?.lastContactsSync {
-                    Text("Contacts: \(contacts.formatted(.dateTime.month().day().hour().minute()))")
-                        .foregroundStyle(MemoryTheme.inkSoft)
+                    LabeledContent("Contacts") {
+                        Text(contacts, format: .dateTime.month().day().hour().minute())
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if let calendar = settingsRows.first?.lastCalendarSync {
-                    Text("Calendar: \(calendar.formatted(.dateTime.month().day().hour().minute()))")
-                        .foregroundStyle(MemoryTheme.inkSoft)
+                    LabeledContent("Calendar") {
+                        Text(calendar, format: .dateTime.month().day().hour().minute())
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                if let error = store.lastError ?? settingsRows.first?.lastError {
+            } header: {
+                Text("Sync")
+            } footer: {
+                Text("Memory reads Contacts and Calendar on this iPhone. Notes stay on-device.")
+            }
+
+            if let error = store.lastError ?? settingsRows.first?.lastError {
+                Section {
                     Text(error)
-                        .foregroundStyle(MemoryTheme.coral)
+                        .foregroundStyle(.red)
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
                 }
             }
 
             Section("Reminders") {
                 Stepper(value: hoursBinding, in: 1...168) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Hours before calendar events to surface notes")
-                        Text("\(settings.eventReminderHours) hours")
-                            .font(.subheadline)
-                            .foregroundStyle(MemoryTheme.inkSoft)
+                    LabeledContent("Before Events") {
+                        Text("\(settings.eventReminderHours) hr")
+                            .foregroundStyle(.secondary)
                     }
                 }
-                Toggle("Lock screen notifications for upcoming reminders", isOn: notificationsBinding)
+                Toggle("Notifications", isOn: notificationsBinding)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background { AtmosphereBackground() }
         .navigationTitle("Settings")
-        .safeAreaInset(edge: .bottom) {
-            if let savedMessage {
-                Text(savedMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(MemoryTheme.seaDeep)
-                    .padding(.bottom, 12)
-            }
-        }
         .onAppear {
             _ = settings
         }
@@ -69,7 +78,6 @@ struct SettingsView: View {
             set: { newValue in
                 settings.eventReminderHours = newValue
                 store.refreshReminders(context: modelContext, settings: settings)
-                savedMessage = "Saved"
             }
         )
     }
@@ -83,7 +91,6 @@ struct SettingsView: View {
                     Task { await NotificationService.requestAuthorizationIfNeeded() }
                 }
                 store.refreshReminders(context: modelContext, settings: settings)
-                savedMessage = "Saved"
             }
         )
     }

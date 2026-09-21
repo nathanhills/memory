@@ -1,8 +1,8 @@
 # Memory for iPhone
 
-Native SwiftUI app for remembering the people in your life. This is the current product surface — iPhone only.
+Native SwiftUI iPhone app. Navigation, lists, forms, and empty states use system components (`TabView`, `NavigationStack`, `List`, `Form`, `ContentUnavailableView`).
 
-Notes, reminder preferences, and dismissed reminders live on-device with SwiftData. People and events come from the iPhone Contacts and Calendar apps (the iOS equivalent of the earlier Google sync).
+Notes, reminder preferences, and dismissed reminders live on-device with SwiftData. People and events come from the iPhone Contacts and Calendar apps.
 
 ## Open in Xcode
 

@@ -15,6 +15,15 @@ enum ReminderKind: String, Codable, CaseIterable {
         case .preEvent: "Before event"
         }
     }
+
+    var systemImage: String {
+        switch self {
+        case .noteDue: "note.text"
+        case .birthday: "gift"
+        case .anniversary: "heart"
+        case .preEvent: "calendar"
+        }
+    }
 }
 
 enum ReminderStatus: String, Codable {
