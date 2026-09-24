@@ -9,6 +9,7 @@ struct MemoryApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
+                .preferredColorScheme(.light)
         }
         .modelContainer(for: [ContactNote.self, ReminderRecord.self, AppSettings.self])
     }
@@ -18,10 +19,26 @@ struct MemoryApp: App {
     WelcomeView(isRequesting: false, onContinue: {})
 }
 
-#Preview("Today") {
+#Preview("Updates") {
     NavigationStack {
-        TodayView()
+        UpdatesView()
     }
-    .environment(MemoryStore())
-    .modelContainer(for: [ContactNote.self, ReminderRecord.self, AppSettings.self], inMemory: true)
+    .environment(PreviewSupport.store())
+    .modelContainer(PreviewSupport.container())
+}
+
+#Preview("Contacts") {
+    NavigationStack {
+        ContactsView()
+    }
+    .environment(PreviewSupport.store())
+    .modelContainer(PreviewSupport.container())
+}
+
+#Preview("Person") {
+    NavigationStack {
+        PersonDetailView(person: .previewJordan)
+    }
+    .environment(PreviewSupport.store())
+    .modelContainer(PreviewSupport.container())
 }

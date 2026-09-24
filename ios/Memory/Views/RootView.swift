@@ -4,7 +4,6 @@ import SwiftUI
 struct RootView: View {
     @Environment(MemoryStore.self) private var store
     @Environment(\.modelContext) private var modelContext
-    @Query private var settingsRows: [AppSettings]
     @State private var isRequesting = false
 
     private var settings: AppSettings {
@@ -21,6 +20,8 @@ struct RootView: View {
                 }
             }
         }
+        .preferredColorScheme(.light)
+        .tint(MemoryTheme.orange)
         .onAppear {
             _ = settings
             if settings.hasCompletedOnboarding {
@@ -43,27 +44,32 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    @State private var selection: AppTab = .updates
+
     var body: some View {
-        TabView {
-            NavigationStack {
-                TodayView()
-            }
-            .tabItem { Label("Today", systemImage: "sun.max") }
+        VStack(spacing: 0) {
+            ZStack {
+                NavigationStack {
+                    UpdatesView()
+                }
+                .opacity(selection == .updates ? 1 : 0)
+                .offset(x: selection == .updates ? 0 : -12)
+                .allowsHitTesting(selection == .updates)
+                .accessibilityHidden(selection != .updates)
 
-            NavigationStack {
-                PeopleView()
+                NavigationStack {
+                    ContactsView()
+                }
+                .opacity(selection == .contacts ? 1 : 0)
+                .offset(x: selection == .contacts ? 0 : 12)
+                .allowsHitTesting(selection == .contacts)
+                .accessibilityHidden(selection != .contacts)
             }
-            .tabItem { Label("People", systemImage: "person.2") }
+            .animation(.easeInOut(duration: 0.18), value: selection)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            NavigationStack {
-                RemindersView()
-            }
-            .tabItem { Label("Reminders", systemImage: "bell") }
-
-            NavigationStack {
-                SettingsView()
-            }
-            .tabItem { Label("Settings", systemImage: "gearshape") }
+            MemoryTabBar(selection: $selection)
         }
+        .background(MemoryTheme.cream.ignoresSafeArea())
     }
 }

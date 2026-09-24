@@ -22,11 +22,8 @@ People and events come from the iPhone address book and calendars. Notes and rem
 
 | Tab | Purpose |
 | --- | --- |
-| Today | Upcoming reminders / first sync |
-| People | Searchable contacts |
-| Person | Notes + upcoming shared events |
-| Reminders | Notes due, birthdays, pre-event context |
-| Settings | Sync, event lead time, notifications |
+| Updates | Reminders due now and coming up; settings from the header |
+| Contacts | Searchable people; open anyone for notes and shared events |
 
 ## Web MVP (earlier)
 

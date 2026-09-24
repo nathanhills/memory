@@ -1,6 +1,6 @@
 # Memory for iPhone
 
-Native SwiftUI iPhone app. Navigation, lists, forms, and empty states use system components (`TabView`, `NavigationStack`, `List`, `Form`, `ContentUnavailableView`).
+Native SwiftUI iPhone app with two tabs: **Updates** (reminders) and **Contacts**. The look is editorial — condensed type, color-block cards, oversized numbers, circular letter badges — on a cream, gray, orange, and green palette.
 
 Notes, reminder preferences, and dismissed reminders live on-device with SwiftData. People and events come from the iPhone Contacts and Calendar apps.
 
@@ -11,22 +11,22 @@ Notes, reminder preferences, and dismissed reminders live on-device with SwiftDa
 3. Select your Team under **Signing & Capabilities** if you are running on a device (`app.memory.ios`).
 4. Press Run.
 
-The first launch asks for Contacts, Calendar, and notification permission, then lands on **Today**.
+The first launch asks for Contacts, Calendar, and notification permission, then lands on **Updates**.
 
 ## What you can do
 
 | Tab | Purpose |
 | --- | --- |
-| Today | Who to remember this week, plus first-sync empty state |
-| People | Searchable contacts; open anyone to add a note |
-| Reminders | Notes due, birthdays, anniversaries, pre-event context |
-| Settings | Sync now, hours-before-event, lock-screen notifications |
+| Updates | Notes due, birthdays, anniversaries, and pre-event context. Settings (sync, hours-before-event, notifications) opens from the header. |
+| Contacts | Searchable people, grouped by letter. Open anyone to add a note. |
 
 Reminders are rebuilt whenever you sync or save a note:
 
 - Optional remind-on date on a note
 - Next birthday / anniversary within 30 days
 - Upcoming calendar events whose attendees match a contact (by email or name), with that person’s recent notes
+
+Swipe a reminder right-to-left to dismiss it.
 
 ## Permissions
 
