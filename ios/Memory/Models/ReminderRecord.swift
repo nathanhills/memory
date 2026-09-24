@@ -24,6 +24,15 @@ enum ReminderKind: String, Codable, CaseIterable {
         case .preEvent: "calendar"
         }
     }
+
+    var editorialLabel: String {
+        switch self {
+        case .noteDue: "NOTE"
+        case .birthday: "BIRTHDAY"
+        case .anniversary: "ANNIVERSARY"
+        case .preEvent: "BEFORE"
+        }
+    }
 }
 
 enum ReminderStatus: String, Codable {
@@ -79,5 +88,9 @@ final class ReminderRecord {
         self.eventIdentifier = eventIdentifier
         self.dedupeKey = dedupeKey
         self.createdAt = createdAt
+    }
+
+    var dueDayNumber: String {
+        String(Calendar.current.component(.day, from: dueAt))
     }
 }

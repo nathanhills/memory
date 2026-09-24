@@ -4,6 +4,7 @@ import SwiftUI
 struct PersonDetailView: View {
     @Environment(MemoryStore.self) private var store
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \ContactNote.createdAt, order: .reverse) private var allNotes: [ContactNote]
 
     let person: Person
@@ -20,44 +21,107 @@ struct PersonDetailView: View {
     var body: some View {
         List {
             Section {
-                HStack(spacing: 16) {
-                    PersonAvatar(person: person, size: 56)
-                    VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 12) {
+                    CircleIconButton(systemName: "arrow.left", fill: MemoryTheme.gray) {
+                        dismiss()
+                    }
+                    .accessibilityLabel("Back")
+                    Spacer()
+                    CircleIconButton(systemName: "square.and.pencil", fill: MemoryTheme.orange) {
+                        showingComposer = true
+                    }
+                    .accessibilityLabel("Add Note")
+                }
+                .memoryListRow()
+
+                MemoryCard(fill: person.badgeColor, minHeight: 168) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: -4) {
+                                Text(person.givenName.isEmpty ? person.displayName : person.givenName)
+                                    .memoryDisplay(40)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.6)
+                                if !person.familyName.isEmpty {
+                                    Text(person.familyName)
+                                        .memoryDisplay(40)
+                                        .foregroundStyle(MemoryTheme.ink.opacity(0.28))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.6)
+                                }
+                            }
+                            Spacer()
+                            Text(person.primaryLetter)
+                                .memoryDisplay(72)
+                        }
+
                         if let email = person.emails.first {
                             Text(email)
-                                .foregroundStyle(.secondary)
+                                .font(.memory(14, weight: .semibold))
+                                .foregroundStyle(MemoryTheme.ink.opacity(0.7))
                         }
                         if let birthday = person.birthdayLabel {
-                            Text(birthday)
-                                .foregroundStyle(.secondary)
+                            Text(birthday.uppercased())
+                                .font(.memory(12, weight: .heavy))
+                                .fontWidth(.condensed)
+                                .tracking(0.8)
+                                .foregroundStyle(MemoryTheme.ink)
                         }
                     }
                 }
+                .memoryListRow()
             }
 
-            Section("Notes") {
+            Section {
+                SectionWord(text: "Notes")
+                    .memoryListRow()
+
                 Button {
                     showingComposer = true
                 } label: {
-                    Label("Add Note", systemImage: "plus")
+                    MemoryCard(fill: MemoryTheme.orange, minHeight: 72) {
+                        HStack {
+                            Text("Add note")
+                                .memoryDisplay(24)
+                            Spacer()
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .frame(width: 36, height: 36)
+                                .background(MemoryTheme.paper.opacity(0.55), in: Circle())
+                                .foregroundStyle(MemoryTheme.ink)
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
+                .memoryListRow()
 
                 if notes.isEmpty {
-                    Text("No notes yet.")
-                        .foregroundStyle(.secondary)
+                    EmptyEditorialCard(
+                        title: "No notes\nyet",
+                        subtitle: "Write something you want to remember the next time you see them.",
+                        count: "0",
+                        fill: MemoryTheme.gray
+                    )
+                    .memoryListRow()
                 } else {
                     ForEach(notes, id: \.id) { note in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(note.body)
-                            HStack {
-                                Text(note.createdAt, format: .dateTime.month().day().year())
-                                if let remindAt = note.remindAt {
-                                    Text(remindAt, format: .dateTime.month().day().hour().minute())
+                        MemoryCard(fill: MemoryTheme.paper, minHeight: 96) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(note.body)
+                                    .font(.memory(16, weight: .semibold))
+                                    .foregroundStyle(MemoryTheme.ink)
+                                HStack {
+                                    Text(note.createdAt, format: .dateTime.month().day().year())
+                                    if let remindAt = note.remindAt {
+                                        Text("Remind \(remindAt.formatted(.dateTime.month().day().hour().minute()))")
+                                    }
                                 }
+                                .font(.memory(12, weight: .bold))
+                                .fontWidth(.condensed)
+                                .foregroundStyle(MemoryTheme.muted)
                             }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                         }
+                        .memoryListRow()
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button("Delete", role: .destructive) {
                                 store.deleteNote(note, context: modelContext)
@@ -67,33 +131,53 @@ struct PersonDetailView: View {
                 }
             }
 
-            Section("Upcoming Together") {
+            Section {
+                SectionWord(text: "Together")
+                    .memoryListRow()
+
                 if sharedEvents.isEmpty {
-                    Text("No matching calendar events.")
-                        .foregroundStyle(.secondary)
+                    EmptyEditorialCard(
+                        title: "No shared\nevents",
+                        subtitle: "Upcoming calendar events that match this person will land here.",
+                        count: "0",
+                        fill: MemoryTheme.gray
+                    )
+                    .memoryListRow()
                 } else {
-                    ForEach(sharedEvents) { event in
-                        LabeledContent(event.title) {
-                            Text(event.start, format: .dateTime.month().day().hour().minute())
-                                .foregroundStyle(.secondary)
+                    ForEach(Array(sharedEvents.enumerated()), id: \.element.id) { index, event in
+                        MemoryCard(fill: index.isMultiple(of: 2) ? MemoryTheme.sage : MemoryTheme.stone, minHeight: 100) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("EVENT")
+                                        .font(.memory(12, weight: .heavy))
+                                        .fontWidth(.condensed)
+                                        .tracking(0.8)
+                                    Text(event.title)
+                                        .memoryDisplay(24)
+                                        .lineLimit(2)
+                                    Text(event.start, format: .dateTime.month().day().hour().minute())
+                                        .font(.memory(13, weight: .bold))
+                                        .fontWidth(.condensed)
+                                        .foregroundStyle(MemoryTheme.ink.opacity(0.65))
+                                }
+                                Spacer()
+                                Text(String(Calendar.current.component(.day, from: event.start)))
+                                    .memoryDisplay(52)
+                            }
                         }
+                        .memoryListRow()
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .listSectionSeparator(.hidden)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .memoryBackground()
         .navigationTitle(person.displayName)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingComposer = true
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                }
-                .accessibilityLabel("Add Note")
-            }
-        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingComposer) {
             NoteComposerView(person: person)
         }
@@ -116,42 +200,86 @@ struct NoteComposerView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Note") {
-                    TextField("Something you want to remember", text: $draft, axis: .vertical)
-                        .lineLimit(3...8)
-                }
+            List {
                 Section {
-                    Toggle("Remind Me", isOn: $includeReminder)
+                    HStack {
+                        VStack(alignment: .leading, spacing: -4) {
+                            Text("New")
+                            Text("Note")
+                                .foregroundStyle(MemoryTheme.ink.opacity(0.28))
+                        }
+                        .memoryDisplay(40)
+                        Spacer()
+                        CircleIconButton(systemName: "xmark", fill: MemoryTheme.gray) {
+                            dismiss()
+                        }
+                        .accessibilityLabel("Cancel")
+                    }
+                    .memoryListRow()
+                }
+
+                Section {
+                    MemoryCard(fill: person.badgeColor, minHeight: 160) {
+                        TextField("Something you want to remember", text: $draft, axis: .vertical)
+                            .font(.memory(22, weight: .semibold))
+                            .fontWidth(.condensed)
+                            .foregroundStyle(MemoryTheme.ink)
+                            .lineLimit(4...10)
+                    }
+                    .memoryListRow()
+
+                    MemoryCard(fill: MemoryTheme.gold, minHeight: 88) {
+                        Toggle(isOn: $includeReminder) {
+                            Text("Remind me")
+                                .memoryDisplay(22)
+                        }
+                        .tint(MemoryTheme.ink)
+                    }
+                    .memoryListRow()
+
                     if includeReminder {
-                        DatePicker("Date", selection: $remindAt)
+                        MemoryCard(fill: MemoryTheme.paper, minHeight: 72) {
+                            DatePicker("Date", selection: $remindAt)
+                                .font(.memory(16, weight: .heavy))
+                                .fontWidth(.condensed)
+                                .foregroundStyle(MemoryTheme.ink)
+                                .tint(MemoryTheme.orange)
+                        }
+                        .memoryListRow()
                     }
-                }
-            }
-            .navigationTitle("New Note")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .accessibilityLabel("Cancel")
-                }
-                ToolbarItem(placement: .confirmationAction) {
+
                     Button {
                         save()
                     } label: {
-                        Image(systemName: "checkmark")
+                        MemoryCard(fill: canSave ? MemoryTheme.orange : MemoryTheme.gray, minHeight: 72) {
+                            HStack {
+                                Text("Save")
+                                    .memoryDisplay(26)
+                                Spacer()
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .frame(width: 36, height: 36)
+                                    .background(MemoryTheme.paper.opacity(0.55), in: Circle())
+                                    .foregroundStyle(MemoryTheme.ink)
+                            }
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.plain)
                     .disabled(!canSave)
+                    .opacity(canSave ? 1 : 0.55)
                     .accessibilityLabel("Save")
+                    .memoryListRow()
                 }
             }
+            .listStyle(.plain)
+            .listSectionSeparator(.hidden)
+            .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
+            .memoryBackground()
+            .toolbar(.hidden, for: .navigationBar)
         }
         .presentationDetents([.medium, .large])
+        .presentationBackground(MemoryTheme.cream)
     }
 
     private func save() {
@@ -164,5 +292,13 @@ struct NoteComposerView: View {
             context: modelContext
         )
         dismiss()
+    }
+}
+
+private extension View {
+    func memoryListRow() -> some View {
+        listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }

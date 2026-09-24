@@ -1,6 +1,6 @@
-import Foundation
-import UIKit
 import Contacts
+import Foundation
+import SwiftUI
 
 struct Person: Identifiable, Hashable {
     let id: String
@@ -37,6 +37,22 @@ struct Person: Identifiable, Hashable {
             return "Birthday \(month)/\(day)/\(year)"
         }
         return "Birthday \(month)/\(day)"
+    }
+
+    var primaryLetter: String {
+        String(displayName.prefix(1)).uppercased()
+    }
+
+    var badgeColor: Color {
+        MemoryTheme.badgeColor(for: id.isEmpty ? displayName : id)
+    }
+
+    var sectionLetter: String {
+        let scalar = displayName.unicodeScalars.first
+        if let scalar, CharacterSet.letters.contains(scalar) {
+            return String(scalar).uppercased()
+        }
+        return "#"
     }
 }
 
@@ -77,6 +93,56 @@ extension Person {
             anniversaryYear = year > 1900 && year < 3000 ? year : nil
         }
     }
+
+    static let previewJordan = Person(
+        id: "preview-jordan",
+        givenName: "Jordan",
+        familyName: "Lee",
+        displayName: "Jordan Lee",
+        emails: ["jordan@example.com"],
+        phones: [],
+        thumbnail: nil,
+        birthdayMonth: 9,
+        birthdayDay: 24,
+        birthdayYear: nil,
+        anniversaryMonth: nil,
+        anniversaryDay: nil,
+        anniversaryYear: nil
+    )
+
+    static let previewSam = Person(
+        id: "preview-sam",
+        givenName: "Sam",
+        familyName: "Rivera",
+        displayName: "Sam Rivera",
+        emails: ["sam@example.com"],
+        phones: [],
+        thumbnail: nil,
+        birthdayMonth: 3,
+        birthdayDay: 8,
+        birthdayYear: nil,
+        anniversaryMonth: nil,
+        anniversaryDay: nil,
+        anniversaryYear: nil
+    )
+
+    static let previewAlex = Person(
+        id: "preview-alex",
+        givenName: "Alex",
+        familyName: "Chen",
+        displayName: "Alex Chen",
+        emails: ["alex@example.com"],
+        phones: [],
+        thumbnail: nil,
+        birthdayMonth: nil,
+        birthdayDay: nil,
+        birthdayYear: nil,
+        anniversaryMonth: 11,
+        anniversaryDay: 2,
+        anniversaryYear: nil
+    )
+
+    static let previews: [Person] = [previewAlex, previewJordan, previewSam]
 }
 
 struct CalendarOccurrence: Identifiable, Hashable {
